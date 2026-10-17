@@ -6,7 +6,7 @@ foreach (array('data', 'antrian', 'undo') as $k) {
 }
 
 /* ---------- SORTING (ascending berdasarkan $key) ---------- */
-function bubbleSort($arr, $key) {
+function bubbleSort($arr, $key) {  
     $n = count($arr);
     for ($i = 0; $i < $n - 1; $i++) {
         for ($j = 0; $j < $n - $i - 1; $j++) {
@@ -45,16 +45,15 @@ function ukurWaktu($fungsi, $arr, $key, $ulang) {
 // Profiling kedua metode pada data yang sama, dipanggil otomatis tiap sorting.
 // $dipakai = metode yang sedang dijalankan user ('bubble' / 'selection').
 function profilSorting($arr, $key, $dipakai, $ulang = 1000) {
-    list($bTotal, $bAvg) = ukurWaktu('bubbleSort', $arr, $key, $ulang);
-    list($sTotal, $sAvg) = ukurWaktu('selectionSort', $arr, $key, $ulang);
+     $fungsi = ($dipakai == 'bubble') ? 'bubbleSort' : 'selectionSort';
+    list($total, $avg) = ukurWaktu($fungsi, $arr, $key, $ulang);
     return array(
-        'jumlah' => count($arr),
-        'key'    => $key,
-        'ulang'  => $ulang,
-        'dipakai'=> $dipakai,
-        'bubble'    => array('total' => $bTotal, 'avg' => $bAvg),
-        'selection' => array('total' => $sTotal, 'avg' => $sAvg),
-        'tercepat'  => ($bTotal <= $sTotal) ? 'bubble' : 'selection',
+        'jumlah'  => count($arr),
+        'key'     => $key,
+        'ulang'   => $ulang,
+        'dipakai' => $dipakai,
+        'total'   => $total,
+        'avg'     => $avg,
     );
 }
 
@@ -79,11 +78,41 @@ function binarySearch($arr, $nim) {
     return -1;
 }
 
+/* ---------- TRAVERSAL ---------- */
+// Format satu baris data mahasiswa
+function barisData($no, $s) {
+    return $no . '. ' . $s['nim'] . ' - ' . $s['nama'] . ' (nilai ' . $s['nilai'] . ')';
+}
+
+// Maju: dari data pertama sampai terakhir
+function traversalMaju($arr) {
+    $hasil = array();
+    $no = 1;
+    foreach ($arr as $s) {
+        $hasil[] = barisData($no++, $s);
+    }
+    return $hasil;
+}
+
+// Mundur: dari data terakhir sampai pertama
+function traversalMundur($arr) {
+    $hasil = array();
+    $no = 1;
+    for ($i = count($arr) - 1; $i >= 0; $i--) {
+        $hasil[] = barisData($no++, $arr[$i]);
+    }
+    return $hasil;
+}
+
 /* ---------- PROSES FORM ---------- */
 $tampil = $_SESSION['data'];
 $pesan = '';
 $hasilCari = null;  //data siswa yang ditemukan
 $profil = null;   // diisi otomatis setiap kali sorting dijalankan
+$metodePilih = 'bubble';   
+$jenisPilih = 'maju';
+$hasilTraversal = null;
+$judulTraversal = '';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
@@ -126,6 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     } elseif ($aksi == 'urut') {
         $metode = ($_POST['metode'] == 'bubble') ? 'bubble' : 'selection';
+        $metodePilih = $metode;
         $hasil = ($metode == 'bubble')
             ? bubbleSort($_SESSION['data'], 'nilai')
             : selectionSort($_SESSION['data'], 'nilai');
@@ -148,6 +178,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $hasilCari = ($i >= 0)
             ? '' . $urut[$i]['nama'] . ' (nilai ' . $urut[$i]['nilai'] . ')'
             : 'NIM tidak ditemukan.';
+
+    } elseif ($aksi == 'traversal') {
+        $jenis = $_POST['jenis'];
+        $jenisPilih = $jenis;
+        if ($jenis == 'maju') {
+            $judulTraversal = 'data pertama ke terakhir';
+            $hasilTraversal = traversalMaju($_SESSION['data']);
+        } elseif ($jenis == 'mundur') {
+            $judulTraversal = 'data terakhir ke pertama';
+            $hasilTraversal = traversalMundur($_SESSION['data']);
+        } 
 
     } elseif ($aksi == 'hapus') {                  // HAPUS satu data
         $nim = $_POST['nim'];
@@ -181,124 +222,359 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 }
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sistem Data Nilai Mahasiswa</title>
+
+<link rel="icon" type="image/svg+xml" href="logo.svg?v=2">
+
 <style>
-   h2.judul {
-    font-family: "Segoe UI", Tahoma, Arial, sans-serif;
-    font-size: 22px;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-    color: #1e3a8a;
-    text-align: left;
-    display: inline-block;
-    margin: 20px 0;
-    padding: 12px 28px;
-    background: #dbeafe;
-    border: 1px solid #bfdbfe;
-    border-radius: 999px;
-    box-shadow: 0 3px 8px rgba(59, 130, 246, 0.2);
+    /* ===== 1. VARIABEL WARNA (mudah diganti di satu tempat) ===== */
+    :root {
+        --biru-tua:   #1e3a8a;
+        --biru:       #2563eb;
+        --biru-muda:  #dbeafe;
+        --abu-bg:     #f1f5f9;
+        --abu-garis:  #e2e8f0;
+        --abu-teks:   #334155;
+        --merah:      #dc2626;
+        --abu-tombol: #64748b;
+        --hijau:      #16a34a;
+    }
+
+    /* ===== 2. RESET & PENGATURAN DASAR ===== */
+    * { box-sizing: border-box; }
+
+    body {
+        margin: 0;
+        padding: 24px 16px;
+        font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+        font-size: 15px;
+        color: var(--abu-teks);
+        background: var(--abu-bg);
+    }
+
+    /* ===== 3. PEMBUNGKUS HALAMAN ===== */
+    .container {
+        max-width: 860px;
+        margin: 0 auto;
+    }
+
+    /* ===== 4. JUDUL UTAMA ===== */
+    h2.judul {
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        color: var(--biru-tua);
+        display: inline-block;
+        margin: 0 0 20px;
+        padding: 12px 28px;
+        background: var(--biru-muda);
+        border: 1px solid #bfdbfe;
+        border-radius: 999px;
+        box-shadow: 0 3px 8px rgba(59, 130, 246, 0.2);
+    }
+
+    /* ===== 5. KARTU (satu kartu = satu bagian/fitur) ===== */
+    .card {
+        background: #fff;
+        border: 1px solid var(--abu-garis);
+        border-radius: 12px;
+        padding: 18px 22px;
+        margin-bottom: 18px;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+    }
+
+    .card h3 {
+        margin: 0 0 14px;
+        padding-bottom: 10px;
+        font-size: 17px;
+        color: var(--biru-tua);
+        border-bottom: 2px solid var(--biru-muda);
+    }
+
+    /* ===== 6. FORM & INPUT ===== */
+    .baris {                      /* susun elemen form sejajar & otomatis turun baris */
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .baris label {
+        font-weight: 600;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+        padding: 8px 10px;
+        font-size: 14px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: #fff;
+        color: var(--abu-teks);
+        transition: border-color .15s, box-shadow .15s;
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    select:focus {
+        outline: none;
+        border-color: var(--biru);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    }
+
+    /* ===== 7. TOMBOL ===== */
+    button {
+        padding: 8px 16px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #fff;
+        background: var(--biru);
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background .15s, transform .05s;
+    }
+    button:hover  { background: var(--biru-tua); }
+    button:active { transform: scale(0.96); }
+
+    button.abu    { background: var(--abu-tombol); }
+    button.abu:hover { background: #475569; }
+
+    button.merah  { background: var(--merah); }
+    button.merah:hover { background: #b91c1c; }
+
+    /* ===== 8. KOTAK INFORMASI (antrian, profiling, hasil) ===== */
+    .info {
+        margin: 12px 0;
+        padding: 10px 14px;
+        background: var(--abu-bg);
+        border-left: 4px solid var(--biru);
+        border-radius: 6px;
+    }
+
+    .hasil {
+        margin: 12px 0 0;
+        padding: 10px 14px;
+        background: #f0fdf4;
+        border-left: 4px solid var(--hijau);
+        border-radius: 6px;
+        font-style: italic;
+    }
+
+    .daftar {                     /* hasil traversal */
+        margin: 8px 0 0;
+        padding: 0;
+        list-style: none;
+    }
+    .daftar li {
+        padding: 6px 12px;
+        border-bottom: 1px dashed var(--abu-garis);
+    }
+    .daftar li:last-child { border-bottom: none; }
+
+    /* ===== 9. TABEL ===== */
+    .tabel-wrap {                 /* supaya tabel bisa digeser di layar kecil */
+        overflow-x: auto;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+
+    th, td {
+        padding: 10px 12px;
+        text-align: left;
+        border-bottom: 1px solid var(--abu-garis);
+    }
+
+    th {
+        background: var(--biru-tua);
+        color: #fff;
+        font-weight: 600;
+    }
+    th:first-child { border-top-left-radius: 8px; }
+    th:last-child  { border-top-right-radius: 8px; }
+
+    tr:nth-child(even) td { background: #f8fafc; }   /* garis selang-seling */
+    tr:hover td           { background: var(--biru-muda); }
+
+/* ===== 10. RESPONSIF UNTUK HP ===== */
+@media (max-width: 600px) {
+    body {
+        padding: 12px 10px;
+        font-size: 14px;
+    }
+
+    h2.judul {
+        display: block;
+        text-align: center;
+        font-size: 18px;
+        padding: 10px 16px;
+        border-radius: 18px;
+    }
+
+    .card {
+        padding: 14px;
+    }
+
+    /* Form tersusun ke bawah, bukan berjajar */
+    .baris {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .baris label {
+        margin-bottom: -4px;
+    }
+
+    /* 16px mencegah browser iPhone otomatis zoom saat input diketuk */
+    input[type="text"],
+
+    input[type="number"],
+    select {
+        width: 100%;
+        font-size: 16px;
+    }
+
+    /* Tombol selebar layar (tombol Hapus di tabel tidak terpengaruh) */
+    .baris button {
+        width: 100%;
+        padding: 10px 16px;
+    }
+
+    /* Tabel lebih ringkas, tetap bisa digeser ke samping */
+    th, td {
+        padding: 8px;
+        font-size: 13px;
+    }
 }
+
 </style>
 </head>
 <body>
+<div class="container">
 
 <h2 class="judul">Sistem Data Nilai Mahasiswa</h2>
 
-<hr>
+<div class="card">
+    <h3>Tambah ke Antrian</h3>
+    <form method="post" class="baris">
+        <input type="hidden" name="aksi" value="tambah">
+        <label>NIM:</label> <input type="text" name="nim" required>
+        <label>Nama:</label> <input type="text" name="nama" required>
+        <label>Nilai:</label> <input type="number" name="nilai" min="0" max="100" required>
+        <button>Tambah</button>
+    </form>
 
-<h3>1. Tambah ke Antrian</h3>
-<form method="post">
-    <input type="hidden" name="aksi" value="tambah">
-    NIM: <input type="text" name="nim" required>
-    Nama: <input type="text" name="nama" required>
-    Nilai: <input type="number" name="nilai" min="0" max="100" required>
-    <button>Tambah</button>
-</form>
-<p>Antrian: <?php
-    $n = array();
-    foreach ($_SESSION['antrian'] as $s) $n[] = htmlspecialchars($s['nama']);
+    <div class="info">Antrian: <?php
+        $n = array();
+        foreach ($_SESSION['antrian'] as $s) $n[] = htmlspecialchars($s['nama']);
 
-    echo count($n) ? implode(' &rarr; ', $n) : '(kosong)';
-?></p>
+        echo count($n) ? implode(' &rarr; ', $n) : '(kosong)';
+    ?></div>
 
-<form method="post" style="display:inline">
-    <input type="hidden" name="aksi" value="proses"><button>Proses Antrian</button>
-</form>
-<form method="post" style="display:inline">
-    <input type="hidden" name="aksi" value="undo"><button>Undo</button>
-</form>
-<form method="post" style="display:inline">
-    <input type="hidden" name="aksi" value="reset"><button>Reset</button>
-</form>
+    <div class="baris">
+        <form method="post">
+            <input type="hidden" name="aksi" value="proses"><button>Proses Antrian</button>
+        </form>
+        <form method="post">
+            <input type="hidden" name="aksi" value="undo"><button class="abu">Undo</button>
+        </form>
+        <form method="post">
+            <input type="hidden" name="aksi" value="reset"><button class="merah">Reset</button>
+        </form>
+    </div>
+</div>
 
-<br>
+<div class="card">
+    <h3>Urutkan Nilai</h3>
+    <form method="post" class="baris">
+        <input type="hidden" name="aksi" value="urut">
+        <select name="metode">
+            <option value="bubble" <?php if ($metodePilih == 'bubble') echo 'selected'; ?>>Bubble Sort</option>
+            <option value="selection" <?php if ($metodePilih == 'selection') echo 'selected'; ?>>Selection Sort</option>
+        </select>
+        <button>Urutkan</button>
+    </form>
 
-<br>
+    <?php if ($profil): ?>
+    <div class="info">
+        <?php echo ucfirst($profil['dipakai']); ?> Sort :
+        <?php echo round($profil['total'], 2); ?> ms
+        (rata-rata <?php echo round($profil['avg'], 4); ?> ms)
+    </div>
+    <?php endif; ?>
+</div>
 
-<hr>
+<div class="card">
+    <h3>Cari Data</h3>
+    <form method="post" class="baris">
+        <input type="text" name="kunci" placeholder="Nama / NIM" required>
+        <button name="aksi" value="cari_linear">Cari Nama</button>
+        <button name="aksi" value="cari_binary">Cari NIM</button>
+    </form>
 
-<h3>2. Urutkan Nilai</h3>
-<form method="post">
-    <input type="hidden" name="aksi" value="urut">
-    <select name="metode">
-        <option value="bubble">Bubble Sort</option>
-        <option value="selection">Selection Sort</option>
-    </select>
-    <button>Urutkan</button>
-</form>
+    <?php if ($hasilCari) echo '<div class="hasil">' . htmlspecialchars($hasilCari) . '</div>'; ?>
+</div>
 
-<?php if ($profil): ?>
-<p>
-    Bubble Sort <?php echo round($profil['bubble']['total'], 2); ?> ms
-    (rata-rata <?php echo round($profil['bubble']['avg'], 4); ?> ms),
-    Selection Sort <?php echo round($profil['selection']['total'], 2); ?> ms
-    (rata-rata <?php echo round($profil['selection']['avg'], 4); ?> ms).
-    Tercepat: <?php echo ucfirst($profil['tercepat']); ?> Sort.
-</p>
-<?php endif; ?>
+<div class="card">
+    <h3>Traversal</h3>
+    <form method="post" class="baris">
+        <input type="hidden" name="aksi" value="traversal">
+        <select name="jenis">
+            <option value="maju" <?php if ($jenisPilih == 'maju') echo 'selected'; ?>>Maju</option>
+            <option value="mundur" <?php if ($jenisPilih == 'mundur') echo 'selected'; ?>>Mundur</option>
+        </select>
+        <button>Telusuri</button>
+    </form>
 
-<br>
+    <?php if ($hasilTraversal !== null): ?>
+        <p><b><?php echo htmlspecialchars($judulTraversal); ?></b></p>
+        <?php if (count($hasilTraversal) == 0): ?>
+            <p><i>(kosong)</i></p>
+        <?php else: ?>
+            <ul class="daftar">
+            <?php foreach ($hasilTraversal as $baris): ?>
+                <li><?php echo htmlspecialchars($baris); ?></li>
+            <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+    <?php endif; ?>
+</div>
 
-<hr>
+<div class="card">
+    <h3>Data Mahasiswa</h3>
+    <div class="tabel-wrap">
+    <table>
+        <tr><th>No</th><th>NIM</th><th>Nama</th><th>Nilai</th><th>Aksi</th></tr>
+        <?php foreach ($tampil as $i => $s): ?>
+        <tr>
+            <td><?php echo $i + 1; ?></td>
+            <td><?php echo htmlspecialchars($s['nim']); ?></td>
+            <td><?php echo htmlspecialchars($s['nama']); ?></td>
+            <td><?php echo $s['nilai']; ?></td>
+            <td>
+                <form method="post" style="display:inline"
+                      onsubmit="return confirm('Hapus data ini?');">
+                    <input type="hidden" name="aksi" value="hapus">
+                    <input type="hidden" name="nim" value="<?php echo htmlspecialchars($s['nim']); ?>">
+                    <button class="merah">Hapus</button>
+                </form>
+            </td>
+        </tr>
+        <?php endforeach; ?>
+    </table>
+    </div>
+</div>
 
-<h3>3. Cari Data</h3>
-<form method="post">
-    <input type="text" name="kunci" placeholder="Nama / NIM" required>
-    <button name="aksi" value="cari_linear">Cari Nama</button>
-    <button name="aksi" value="cari_binary">Cari NIM</button>
-</form>
-
-<?php if ($hasilCari) echo '<p><i>' . htmlspecialchars($hasilCari) . '</i></p>'; ?>
-
-<h3>Data Mahasiswa</h3>
-<table border="1" cellpadding="6" cellspacing="0">
-    <tr><th>No</th><th>NIM</th><th>Nama</th><th>Nilai</th><th>Aksi</th></tr>
-    <?php foreach ($tampil as $i => $s): ?>
-    <tr>
-        <td><?php echo $i + 1; ?></td>
-        <td><?php echo htmlspecialchars($s['nim']); ?></td>
-        <td><?php echo htmlspecialchars($s['nama']); ?></td>
-        <td><?php echo $s['nilai']; ?></td>
-        <td>
-            <form method="post" style="display:inline"
-                  onsubmit="return confirm('Hapus data ini?');">
-                <input type="hidden" name="aksi" value="hapus">
-                <input type="hidden" name="nim" value="<?php echo htmlspecialchars($s['nim']); ?>">
-                <button>Hapus</button>
-            </form>
-        </td>
-    </tr>
-    <?php endforeach; ?>
-</table>
-
-<br>
-
-<hr>
-
-<br>
-
+</div>
 </body>
 </html>
