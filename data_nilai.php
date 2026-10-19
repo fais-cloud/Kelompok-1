@@ -5,7 +5,7 @@ foreach (array('data', 'antrian', 'undo') as $k) {
     if (!isset($_SESSION[$k])) $_SESSION[$k] = array();
 }
 
-/* ---------- SORTING (ascending berdasarkan $key) ---------- */
+/* ---------- SORTING ---------- */
 function bubbleSort($arr, $key) {  
     $n = count($arr);
     for ($i = 0; $i < $n - 1; $i++) {
@@ -32,9 +32,6 @@ function selectionSort($arr, $key) {
 }
 
 /* ---------- PROFILING ---------- */
-// Ukur waktu sebuah fungsi sorting. Dijalankan berulang karena satu kali
-// eksekusi pada data kecil terlalu cepat untuk diukur secara akurat.
-// Return: array(total_ms, rata_rata_ms_per_eksekusi)
 function ukurWaktu($fungsi, $arr, $key, $ulang) {
     $t = microtime(true);
     for ($k = 0; $k < $ulang; $k++) $fungsi($arr, $key);
@@ -42,8 +39,6 @@ function ukurWaktu($fungsi, $arr, $key, $ulang) {
     return array($total, $total / $ulang);
 }
 
-// Profiling kedua metode pada data yang sama, dipanggil otomatis tiap sorting.
-// $dipakai = metode yang sedang dijalankan user ('bubble' / 'selection').
 function profilSorting($arr, $key, $dipakai, $ulang = 1000) {
      $fungsi = ($dipakai == 'bubble') ? 'bubbleSort' : 'selectionSort';
     list($total, $avg) = ukurWaktu($fungsi, $arr, $key, $ulang);
@@ -58,7 +53,6 @@ function profilSorting($arr, $key, $dipakai, $ulang = 1000) {
 }
 
 /* ---------- SEARCHING ---------- */
-// Linear search: cek satu per satu (data tidak perlu urut)
 function linearSearch($arr, $nama) {
     foreach ($arr as $i => $s) {
         if (strcasecmp($s['nama'], $nama) == 0) return $i;
@@ -66,7 +60,6 @@ function linearSearch($arr, $nama) {
     return -1;
 }
 
-// Binary search: data HARUS sudah urut berdasarkan NIM
 function binarySearch($arr, $nim) {
     $low = 0; $high = count($arr) - 1;
     while ($low <= $high) {
@@ -79,12 +72,10 @@ function binarySearch($arr, $nim) {
 }
 
 /* ---------- TRAVERSAL ---------- */
-// Format satu baris data mahasiswa
 function barisData($no, $s) {
     return $no . '. ' . $s['nim'] . ' - ' . $s['nama'] . ' (nilai ' . $s['nilai'] . ')';
 }
 
-// Maju: dari data pertama sampai terakhir
 function traversalMaju($arr) {
     $hasil = array();
     $no = 1;
@@ -94,7 +85,6 @@ function traversalMaju($arr) {
     return $hasil;
 }
 
-// Mundur: dari data terakhir sampai pertama
 function traversalMundur($arr) {
     $hasil = array();
     $no = 1;
@@ -104,9 +94,7 @@ function traversalMundur($arr) {
     return $hasil;
 }
 
-/* ---------- TREE (Binary Search Tree berdasarkan NIM) ---------- */
-// Setiap node: array('s' => data mahasiswa, 'kiri' => node/null, 'kanan' => node/null)
-// NIM lebih kecil -> kiri, NIM sama/lebih besar -> kanan.
+/* ---------- TREE (Berdasarkan NIM) ---------- */
 function tambahNode($node, $s) {
     if ($node === null) {
         return array('s' => $s, 'kiri' => null, 'kanan' => null);
@@ -119,14 +107,12 @@ function tambahNode($node, $s) {
     return $node;
 }
 
-// Bangun tree dari data, sesuai urutan data masuk
 function bangunTree($arr) {
     $root = null;
     foreach ($arr as $s) $root = tambahNode($root, $s);
     return $root;
 }
 
-// Preorder: Root -> Kiri -> Kanan
 function preorder($node, &$hasil) {
     if ($node === null) return;
     $hasil[] = $node['s'];
@@ -134,7 +120,6 @@ function preorder($node, &$hasil) {
     preorder($node['kanan'], $hasil);
 }
 
-// Inorder: Kiri -> Root -> Kanan (hasilnya terurut menurut NIM)
 function inorder($node, &$hasil) {
     if ($node === null) return;
     inorder($node['kiri'], $hasil);
@@ -142,7 +127,6 @@ function inorder($node, &$hasil) {
     inorder($node['kanan'], $hasil);
 }
 
-// Postorder: Kiri -> Kanan -> Root
 function postorder($node, &$hasil) {
     if ($node === null) return;
     postorder($node['kiri'], $hasil);
@@ -150,7 +134,6 @@ function postorder($node, &$hasil) {
     $hasil[] = $node['s'];
 }
 
-// Level-order (BFS pada tree): per tingkat, dari atas ke bawah
 function levelorder($root, &$hasil) {
     if ($root === null) return;
     $queue = array($root);
@@ -162,7 +145,6 @@ function levelorder($root, &$hasil) {
     }
 }
 
-// Jalankan traversal tree sesuai jenis, kembalikan daftar baris siap tampil
 function traversalTree($arr, $jenis) {
     $root = bangunTree($arr);
     $urut = array();
@@ -177,7 +159,6 @@ function traversalTree($arr, $jenis) {
     return $hasil;
 }
 
-// Gambar struktur tree sebagai teks berindentasi (untuk tag <pre>)
 function pohonTeks($node, $indent, $label, &$out) {
     if ($node === null) return;
     $out[] = $indent . $label . $node['s']['nim'] . ' - ' . $node['s']['nama'];
@@ -186,9 +167,6 @@ function pohonTeks($node, $indent, $label, &$out) {
 }
 
 /* ---------- GRAPH ---------- */
-// Simpul = mahasiswa. Dua mahasiswa terhubung (sisi tak berarah)
-// jika selisih nilainya <= $batas. Disimpan sebagai adjacency list
-// berdasarkan indeks data.
 function bangunGraph($arr, $batas) {
     $n = count($arr);
     $adj = array();
@@ -204,7 +182,6 @@ function bangunGraph($arr, $batas) {
     return $adj;
 }
 
-// BFS: kunjungi tetangga dulu (pakai queue)
 function bfsGraph($adj, $start) {
     $visited = array($start => true);
     $queue = array($start);
@@ -222,7 +199,6 @@ function bfsGraph($adj, $start) {
     return $urutan;
 }
 
-// DFS: masuk sedalam mungkin dulu (rekursif)
 function dfsGraph($adj, $u, &$visited, &$urutan) {
     $visited[$u] = true;
     $urutan[] = $u;
@@ -231,15 +207,13 @@ function dfsGraph($adj, $u, &$visited, &$urutan) {
     }
 }
 
-// Cari indeks data berdasarkan NIM (-1 jika tidak ada)
 function cariIndeksNim($arr, $nim) {
     foreach ($arr as $i => $s) {
         if ($s['nim'] == $nim) return $i;
     }
     return -1;
 }
-
-// Daftar tetangga tiap simpul, siap tampil
+q
 function daftarTetangga($arr, $adj) {
     $hasil = array();
     foreach ($arr as $i => $s) {
@@ -253,20 +227,18 @@ function daftarTetangga($arr, $adj) {
 /* ---------- PROSES FORM ---------- */
 $tampil = $_SESSION['data'];
 $pesan = '';
-$hasilCari = null;  //data siswa yang ditemukan
-$profil = null;   // diisi otomatis setiap kali sorting dijalankan
+$hasilCari = null;  
+$profil = null;   
 $metodePilih = 'bubble';   
 $jenisPilih = 'maju';
 $hasilTraversal = null;
 $judulTraversal = '';
 
-// Tree
 $treePilih = 'preorder';
 $hasilTree = null;
 $judulTree = '';
 $strukturTree = array();
 
-// Graph
 $graphJenis = 'bfs';
 $graphStart = '';
 $graphBatas = 10;
@@ -279,7 +251,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     $aksi = $_POST['aksi'];
 
-    if ($aksi == 'tambah') {                       // ENQUEUE
+    if ($aksi == 'tambah') {                       
         $_SESSION['antrian'][] = array(
             'nim'   => trim($_POST['nim']),
             'nama'  => trim($_POST['nama']),
@@ -287,7 +259,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         );
         $pesan = 'Data masuk antrian.';
 
-    } elseif ($aksi == 'proses') {                 // DEQUEUE + PUSH ke stack
+    } elseif ($aksi == 'proses') {                 
         if (count($_SESSION['antrian']) > 0) {
             $s = array_shift($_SESSION['antrian']);
             $_SESSION['data'][] = $s;
@@ -297,12 +269,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $pesan = 'Antrian kosong.';
         }
 
-    } elseif ($aksi == 'undo') {                   // POP dari stack
+    } elseif ($aksi == 'undo') {                 
         if (count($_SESSION['undo']) > 0) {
             $nim = array_pop($_SESSION['undo']);
             foreach ($_SESSION['data'] as $i => $s) {
                 if ($s['nim'] == $nim) {
-                    array_unshift($_SESSION['antrian'], $s); // balik ke depan antrian
+                    array_unshift($_SESSION['antrian'], $s); 
                     unset($_SESSION['data'][$i]);
                     break;
                 }
@@ -400,14 +372,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $hasilGraph[] = barisData($no++, $data[$idx]);
                 $dikunjungi[$idx] = true;
             }
-            // Simpul yang tidak terhubung ke simpul awal tidak ikut terkunjungi
+            
             foreach ($data as $i => $s) {
                 if (!isset($dikunjungi[$i])) $takTerjangkau[] = $s['nama'];
             }
             $tetanggaGraph = daftarTetangga($data, $adj);
         }
 
-    } elseif ($aksi == 'hapus') {                  // HAPUS satu data
+    } elseif ($aksi == 'hapus') {               
         $nim = $_POST['nim'];
         $nama = '';
         foreach ($_SESSION['data'] as $i => $s) {
@@ -419,7 +391,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         $_SESSION['data'] = array_values($_SESSION['data']);
 
-        // hapus juga dari stack undo agar tidak mengacu ke data yang sudah tidak ada
         for ($k = count($_SESSION['undo']) - 1; $k >= 0; $k--) {
             if ($_SESSION['undo'][$k] == $nim) {
                 unset($_SESSION['undo'][$k]);
@@ -443,12 +414,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sistem Data Nilai Mahasiswa</title>
+<title>Sistem Manajemen Nilai Mahasiswa</title>
 
 <link rel="icon" type="image/svg+xml" href="logo.svg?v=2">
 
 <style>
-    /* ===== 1. VARIABEL WARNA (mudah diganti di satu tempat) ===== */
+    /* ===== 1. VARIABEL WARNA  ===== */
     :root {
         --biru-tua:   #1e3a8a;
         --biru:       #2563eb;
@@ -513,7 +484,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     /* ===== 6. FORM & INPUT ===== */
-    .baris {                      /* susun elemen form sejajar & otomatis turun baris */
+    .baris {                      
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
@@ -695,7 +666,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <body>
 <div class="container">
 
-<h2 class="judul">Sistem Data Nilai Mahasiswa</h2>
+<h2 class="judul">Sistem Manajemen Nilai Mahasiswa</h2>
 
 <div class="card">
     <h3>Tambah ke Antrian</h3>
@@ -759,7 +730,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 </div>
 
 <div class="card">
-    <h3>Traversal</h3>
+    <h3>Traversal Array</h3>
     <form method="post" class="baris">
         <input type="hidden" name="aksi" value="traversal">
         <select name="jenis">
@@ -784,7 +755,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 </div>
 
 <div class="card">
-    <h3>Traversal Tree (BST berdasarkan NIM)</h3>
+    <h3>Traversal Tree (Berdasarkan NIM)</h3>
     <form method="post" class="baris">
         <input type="hidden" name="aksi" value="traversal_tree">
         <select name="jenis_tree">
