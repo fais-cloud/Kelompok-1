@@ -213,7 +213,7 @@ function cariIndeksNim($arr, $nim) {
     }
     return -1;
 }
-q
+
 function daftarTetangga($arr, $adj) {
     $hasil = array();
     foreach ($arr as $i => $s) {
